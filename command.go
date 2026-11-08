@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -76,7 +77,7 @@ func handlerReset(s *state, cmd Command) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Succes removed all users")
+	fmt.Println("Success, removed all users")
 	return nil
 }
 
@@ -86,20 +87,48 @@ func handlerUsers(s *state, cmd Command) error {
 		return err
 	}
 	for _, i := range users {
-		append := ""
+		a := ""
 		if i.Name == s.cfg.UserName {
-			append = " (Current)"
+			a = " (current)"
 		}
-		fmt.Println(i.Name + append)
+		fmt.Println("* " + i.Name + a)
 	}
 	return nil
 }
 
-func handleAgg(s *state, cmd Command) error {
-	feed, err := fetchFeed(context.Background(), "https://nonexistent.invalid/feed")
+func handlerAgg(s *state, cmd Command) error {
+	feed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
 	if err != nil {
 		return err
 	}
 	fmt.Println(feed)
+	return nil
+}
+
+func handlerAddFeed(s *state, cmd Command) error {
+	if len(cmd.args) != 2 {
+		return errors.New("addfeed <name> <url>")
+	}
+	user, err := s.queries.GetUser(context.Background(), s.cfg.UserName)
+	if errors.Is(err, sql.ErrNoRows) {
+		return errors.New("currect user not found, run login or register")
+	}
+	if err != nil {
+		return err
+	}
+	t := time.Now()
+	feed := database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: t,
+		UpdatedAt: t,
+		Name:      cmd.args[0],
+		Url:       cmd.args[1],
+		UserID:    user.ID,
+	}
+	res, err := s.queries.CreateFeed(context.Background(), feed)
+	if err != nil {
+		return err
+	}
+	fmt.Println(res)
 	return nil
 }
