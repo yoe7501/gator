@@ -111,7 +111,7 @@ func handlerAddFeed(s *state, cmd Command) error {
 	}
 	user, err := s.queries.GetUser(context.Background(), s.cfg.UserName)
 	if errors.Is(err, sql.ErrNoRows) {
-		return errors.New("currect user not found, run login or register")
+		return errors.New("correct user not found, run login or register")
 	}
 	if err != nil {
 		return err
@@ -130,5 +130,19 @@ func handlerAddFeed(s *state, cmd Command) error {
 		return err
 	}
 	fmt.Println(res)
+	return nil
+}
+
+func handlerFeeds(s *state, cmd Command) error {
+	feeds, err := s.queries.GetFeeds(context.Background())
+	if err != nil {
+		return err
+	}
+	for _, f := range feeds {
+		fmt.Println(f.Name)
+		fmt.Println(f.Url)
+		fmt.Println(f.UserName)
+
+	}
 	return nil
 }
