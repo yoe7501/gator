@@ -111,7 +111,7 @@ func handlerAddFeed(s *state, cmd Command) error {
 	}
 	user, err := s.queries.GetUser(context.Background(), s.cfg.UserName)
 	if errors.Is(err, sql.ErrNoRows) {
-		return errors.New("correct user not found, run login or register")
+		return errors.New("current user not found, run login or register")
 	}
 	if err != nil {
 		return err
@@ -129,6 +129,17 @@ func handlerAddFeed(s *state, cmd Command) error {
 	if err != nil {
 		return err
 	}
+	feedFollow := database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		CreatedAt: t,
+		UpdatedAt: t,
+		UserID:    user.ID,
+		FeedID:    res.ID,
+	}
+	_, err = s.queries.CreateFeedFollow(context.Background(), feedFollow)
+	if err != nil {
+		return err
+	}
 	fmt.Println(res)
 	return nil
 }
@@ -143,6 +154,55 @@ func handlerFeeds(s *state, cmd Command) error {
 		fmt.Println(f.Url)
 		fmt.Println(f.UserName)
 
+	}
+	return nil
+}
+
+func handlerFollow(s *state, cmd Command) error {
+	if len(cmd.args) != 1 {
+		return errors.New("follow <url>")
+	}
+	user, err := s.queries.GetUser(context.Background(), s.cfg.UserName)
+	if err != nil {
+		return err
+	}
+	feed, err := s.queries.GetFeed(context.Background(), cmd.args[0])
+	if errors.Is(err, sql.ErrNoRows) {
+		return errors.New("no feed with that URL")
+	}
+	if err != nil {
+		return err
+	}
+	t := time.Now()
+	feedFollow := database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		CreatedAt: t,
+		UpdatedAt: t,
+		UserID:    user.ID,
+		FeedID:    feed.ID,
+	}
+	response, err := s.queries.CreateFeedFollow(context.Background(), feedFollow)
+	if err != nil {
+		return err
+	}
+	fmt.Println(response.FeedName, response.UserName)
+	return nil
+}
+
+func handlerFollowing(s *state, cmd Command) error {
+	user, err := s.queries.GetUser(context.Background(), s.cfg.UserName)
+	if err != nil {
+		return err
+	}
+	feeds, err := s.queries.GetFeedFollowsForUser(context.Background(), user.ID)
+	if err != nil {
+		return err
+	}
+	if len(feeds) == 0 {
+		fmt.Println("No feeds currently being followed! Use follow <url> to follow a feed! OR addfeed <name> <url>!")
+	}
+	for _, f := range feeds {
+		fmt.Println(f)
 	}
 	return nil
 }
